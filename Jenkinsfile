@@ -1,49 +1,30 @@
-pipeline {
-    agent {
-        label 'Agent-Vinod'
-    }
+pipeline{
+    agent { label 'Agent-Vinod' }
     
-    environment {
-        DOCKER_IMAGE = 'avisubir350/first-website'
-        DOCKER_TAG = "${BUILD_NUMBER}"
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-    }
-    
-    stages {
-        stage('Checkout') {
-            steps {
-                git 'https://github.com/avisubir350/first_website.git'
+    stages{
+        stage("Code Clone"){
+            steps{
+                echo "Code Clone Stage"
+                git url: "https://github.com/avisubir350/first_website.git", branch: "main"
             }
         }
-        
-        stage('Build Docker Image') {
-            steps {
-               sh "docker build -t myapp:1.0 ."
+        stage("Code Build & Test"){
+            steps{
+                echo "Code Build Stage"
+                sh "docker build -t my-app:1.0 ."
+            }
+        }
+        stage("Push To DockerHub"){
+            steps{
+                withCredentials([usernamePassword(
+                    credentialsId:"dockerhubcred",
+                    usernameVariable:"dockerHubUser", 
+                    passwordVariable:"dockerHubPass")]){
+                sh "docker login -u ${env.dockerHubUser} -p ${env.dockerHubPass}" 
+                sh "docker image tag my-app:1.0 ${env.dockerHubUser}/my-app:1.0"
+                sh "docker push ${env.dockerHubUser}/my-app:1.0"
                 }
             }
-        }
-        
-        stage('Login to DockerHub') {
-            steps {
-                sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
-            }
-        }
-        
-        stage('Push Docker Image') {
-            steps {
-                script {
-                    docker.withRegistry('', 'dockerhub-credentials') {
-                        docker.image("${DOCKER_IMAGE}:${DOCKER_TAG}").push()
-                        docker.image("${DOCKER_IMAGE}:${DOCKER_TAG}").push('latest')
-                    }
-                }
-            }
-        }
-    }
-    
-    post {
-        always {
-            sh 'docker logout'
         }
     }
 }
