@@ -1,6 +1,6 @@
 pipeline {
     agent {
-        label 'Agent Vinod'
+        label 'Agent-Vinod'
     }
     
     environment {
